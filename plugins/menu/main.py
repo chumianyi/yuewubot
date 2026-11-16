@@ -1,0 +1,29 @@
+WORDS = ("菜单", "功能", "功能列表", "菜单列表")
+
+HELP_TEXT = ("欢迎阅读小鸟游星野使用手册:https://chumianyi.github.io/bot/docs.html\n"
+             "如果访问不了，请执行/helps noweb查看所有插件。")
+
+
+def _list_text(ctx):
+    fn = getattr(ctx.bot, "plugin_list_text", None)
+    if callable(fn):
+        try:
+            return fn()
+        except Exception:
+            pass
+    return HELP_TEXT
+
+
+async def on_message(ctx):
+    if (ctx.text or "").strip() not in WORDS:
+        return False
+    await ctx.reply(HELP_TEXT)
+    return True
+
+
+async def cmd_menu(ctx, args):
+    if str(args or "").strip().lower() == "noweb":
+        await ctx.reply(_list_text(ctx))
+    else:
+        await ctx.reply(HELP_TEXT)
+    return True

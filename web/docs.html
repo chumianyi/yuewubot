@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YueWuBot 插件开发文档</title>
+<link rel="stylesheet" href="./style.css?v=__V__">
+<style>
+  .doc{max-width:880px;margin:0 auto;padding:34px 22px 90px}
+  .doc h1{font-size:28px;letter-spacing:-.6px;margin-bottom:6px}
+  .doc .lead{color:var(--dim);margin-bottom:28px}
+  .doc h2{font-size:18px;margin:34px 0 12px;padding-top:14px;border-top:1px solid var(--line)}
+  .doc h3{font-size:14.5px;margin:20px 0 8px;color:#cfc8ff}
+  .doc p{color:#c3c8da;font-size:13.5px;margin:8px 0}
+  .doc ul,.doc ol{margin:8px 0 8px 20px;color:#c3c8da;font-size:13.5px}
+  .doc li{margin:3px 0}
+  .doc code{background:rgba(255,255,255,.07);padding:2px 6px;border-radius:6px;font-size:12.5px;
+    font-family:ui-monospace,Menlo,Consolas,monospace;color:#d8d2ff}
+  .doc pre{background:rgba(0,0,0,.45);border:1px solid var(--line);border-radius:12px;padding:14px 16px;
+    overflow:auto;margin:12px 0;font-size:12.5px;line-height:1.7}
+  .doc pre code{background:none;padding:0;color:#bfc6db}
+  .doc table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12.5px}
+  .doc th,.doc td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  .doc th{background:rgba(255,255,255,.04);color:#cfd3e4;font-weight:600}
+  .doc td code{font-size:12px}
+  .doc .note{border-left:3px solid var(--brand);background:rgba(124,92,255,.08);padding:10px 14px;
+    border-radius:0 10px 10px 0;margin:14px 0;font-size:13px;color:#cfc9f0}
+  .doc .top{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+  .doc .top a{font-size:12.5px;color:var(--brand3)}
+  .kbd{font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 5px;color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="doc">
+  <div class="top"><a href="./"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:5px"><path d="M19 12H5m6-6-6 6 6 6"/></svg>返回控制台</a></div>
+  <h1>YueWuBot 插件开发文档</h1>
+  <p class="lead">一个 zip 包，两个文件，就能给机器人加功能。v1.4.2</p>
+
+  <h2>一、最小插件</h2>
+  <p>插件就是一个 zip 压缩包，根目录下至少包含：</p>
+  <pre><code>my-plugin.zip
+├── main.py          # 必需，Python 代码
+├── m.json           # 必需，元数据 + 钩子 + 指令声明
+├── icon.png         # 可选，插件图标（建议 128×128）
+└── assets/          # 可选，其他所有文件都放这里
+    ├── data.json
+    └── template.html</code></pre>
+  <div class="note">除 <code>main.py</code>、<code>m.json</code>、<code>icon.png</code> 外，其余文件请一律放进 <code>assets/</code>，避免污染插件根目录。</div>
+
+  <h3>m.json</h3>
+  <pre><code>{
+  "name": "weather",
+  "version": "1.0.0",
+  "author": "YueWu",
+  "description": "查询城市天气",
+  "homepage": "https://example.com/weather",
+  "repository": "https://github.com/example/yuewu-weather",
+  "icon": "icon.png",
+  "hooks": {
+    "on_message": "on_message",
+    "on_group_message": "on_group_message",
+    "on_private_message": "on_private_message",
+    "on_notice": "on_notice",
+    "on_request": "on_request",
+    "on_startup": "on_startup",
+    "on_shutdown": "on_shutdown"
+  },
+  "commands": [
+    {
+      "name": "天气",
+      "aliases": ["weather", "tq"],
+      "description": "查询指定城市天气",
+      "usage": "/天气 北京",
+      "handler": "cmd_weather"
+    }
+  ],
+  "config": {
+    "api_key": { "type": "string", "label": "接口密钥", "default": "" },
+    "unit": { "type": "string", "label": "温度单位", "default": "c" },
+    "enabled": { "type": "bool", "label": "启用天气卡片", "default": true }
+  }
+}</code></pre>
+
+  <h3>字段说明</h3>
+  <table>
+    <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+    <tr><td><code>name</code></td><td>string</td><td>插件唯一标识，同时作为安装目录名，只保留字母数字下划线</td></tr>
+    <tr><td><code>version</code></td><td>string</td><td>版本号</td></tr>
+    <tr><td><code>author</code></td><td>string</td><td>作者，显示在插件卡片上</td></tr>
+    <tr><td><code>description</code></td><td>string</td><td>一句话简介</td></tr>
+    <tr><td><code>homepage</code></td><td>string</td><td>项目主页（可选）</td></tr>
+    <tr><td><code>repository</code></td><td>string</td><td>源码仓库（可选）</td></tr>
+    <tr><td><code>icon</code></td><td>string</td><td>图标文件名，默认 <code>icon.png</code></td></tr>
+    <tr><td><code>hooks</code></td><td>object</td><td>钩子名对应 main.py 中的函数名</td></tr>
+    <tr><td><code>commands</code></td><td>array</td><td>指令声明，见下文</td></tr>
+    <tr><td><code>config</code></td><td>object</td><td>配置项 schema，会在控制台自动生成表单</td></tr>
+  </table>
+
+  <h2>二、钩子（hooks）</h2>
+  <p>钩子函数在 <code>main.py</code> 里定义，可以是普通函数，也可以是 <code>async def</code>。</p>
+  <table>
+    <tr><th>钩子</th><th>触发时机</th><th>参数</th><th>返回值</th></tr>
+    <tr><td><code>on_startup</code></td><td>插件加载后</td><td><code>bot</code></td><td>无</td></tr>
+    <tr><td><code>on_shutdown</code></td><td>插件卸载 / 程序退出</td><td><code>bot</code></td><td>无</td></tr>
+    <tr><td><code>on_message</code></td><td>收到任意消息（指令之后、AI 回复之前）</td><td><code>ctx</code></td><td>返回 <code>True</code> 拦截，AI 不再回复</td></tr>
+    <tr><td><code>on_group_message</code></td><td>群消息</td><td><code>ctx</code></td><td>同上</td></tr>
+    <tr><td><code>on_private_message</code></td><td>私聊消息</td><td><code>ctx</code></td><td>同上</td></tr>
+    <tr><td><code>on_notice</code></td><td>群成员变动、戳一戳等通知</td><td><code>ctx</code></td><td>无</td></tr>
+    <tr><td><code>on_request</code></td><td>加好友 / 加群请求</td><td><code>ctx</code></td><td>无</td></tr>
+  </table>
+  <div class="note">执行顺序：内置指令<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin:0 5px;color:#8b74ff"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>插件指令<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin:0 5px;color:#8b74ff"><path d="M5 12h14m-6-6 6 6-6 6"/></svg><code>on_group_message</code> / <code>on_private_message</code><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin:0 5px;color:#8b74ff"><path d="M5 12h14m-6-6 6 6-6 6"/></svg><code>on_message</code><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin:0 5px;color:#8b74ff"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>模型对话。任一钩子返回真值即中断后续流程。</div>
+  <div class="note">群聊里钩子<strong>不需要 @ 机器人</strong>也会收到消息（可在控制台「插件免 @」关闭）；只有模型对话仍需 @ 或唤醒前缀。因此钩子里请自行判断 <code>ctx.text</code> 是否与自己相关，无关时返回 <code>None</code> 放行。</div>
+
+  <h2>三、指令（commands）</h2>
+  <pre><code>{
+  "name": "天气",              // 指令名，用户输入 /天气
+  "aliases": ["weather", "tq"], // 别名，可省略
+  "description": "查询城市天气",
+  "usage": "/天气 北京",
+  "handler": "cmd_weather"      // main.py 中的函数名
+}</code></pre>
+  <pre><code>def cmd_weather(ctx, args):
+    city = args.strip() or "北京"
+    return ctx.reply("你查的是 " + city)</code></pre>
+  <ul>
+    <li>指令前缀支持 <code>/</code> <code>／</code> <code>#</code> <code>!</code> <code>！</code></li>
+    <li><code>args</code> 是指令名之后的全部文本</li>
+    <li>群里直接发 <code>/指令</code> <strong>无需 @ 机器人</strong>即可触发（仅 <code>/</code> <code>／</code> 开头；<code>#</code> <code>!</code> 在群里不再当指令前缀）</li>
+    <li>群里 <code>#内容</code> 表示<strong>快速对话</strong>：剥掉 <code>#</code> 后直接问模型，免 @、不经过指令与插件</li>
+    <li>已 @ 时未命中任何插件会提示「没有这个指令」；未 @ 的陌生指令静默忽略，不会刷屏</li>
+  </ul>
+
+  <h2>四、Ctx 上下文对象</h2>
+  <table>
+    <tr><th>属性 / 方法</th><th>说明</th></tr>
+    <tr><td><code>ctx.user_id</code></td><td>发送者 QQ 号（字符串）</td></tr>
+    <tr><td><code>ctx.group_id</code></td><td>群号，私聊为空字符串</td></tr>
+    <tr><td><code>ctx.message_type</code></td><td><code>"group"</code> 或 <code>"private"</code></td></tr>
+    <tr><td><code>ctx.sender</code></td><td>发送者昵称</td></tr>
+    <tr><td><code>ctx.text</code></td><td>纯文本正文（图片显示为 <code>[图片]</code>）</td></tr>
+    <tr><td><code>ctx.images</code></td><td>图片地址列表</td></tr>
+    <tr><td><code>ctx.raw</code></td><td>原始事件字典（QQ 官方的开放平台事件已转换成统一结构）</td></tr>
+    <tr><td><code>await ctx.reply(text, at=False)</code></td><td>回复文本，<code>at=True</code> 时在群里 @ 对方</td></tr>
+    <tr><td><code>await ctx.send_image(src)</code></td><td>发送图片，支持 http 链接或本地路径</td></tr>
+    <tr><td><code>await ctx.llm(prompt, system=None)</code></td><td>调用当前配置的大模型</td></tr>
+    <tr><td><code>ctx.cfg</code></td><td>本插件的配置项字典</td></tr>
+    <tr><td><code>ctx.save_config(values)</code></td><td>回写插件配置</td></tr>
+    <tr><td><code>await ctx.api(action, **params)</code></td><td>QQ 官方版不提供 OneBot 动作接口，调用会抛出 <code>RuntimeError</code></td></tr>
+    <tr><td><code>ctx.bot.ob</code></td><td>当前主连接对象（<code>PlatformLink</code>）</td></tr>
+  </table>
+
+  <h3>QQ 官方机器人能做什么</h3>
+  <p>开源版只走 QQ 开放平台，能力边界由平台决定：</p>
+  <ul>
+    <li><strong>收</strong>：群 @ 消息、群消息、单聊消息（网关订阅）</li>
+    <li><strong>发</strong>：文本、图片（图片需公网可访问的 URL）</li>
+    <li><strong>不做</strong>：点赞、禁言、撤回他人消息、好友与入群审批、群成员列表，这些是 OneBot 协议侧的能力</li>
+  </ul>
+  <p>所以插件里不要依赖 <code>ctx.api()</code>，发送统一用 <code>ctx.reply()</code> 与 <code>ctx.send_image()</code>：</p>
+  <pre><code>async def on_group_message(ctx):
+    if "你好" in ctx.text:
+        await ctx.reply("你好呀", at=True)
+        return True</code></pre>
+
+  <h2>五、配置项（config）</h2>
+  <p><code>m.json</code> 里声明的 <code>config</code> 会自动在控制台生成表单，值通过 <code>ctx.cfg</code> 读取：</p>
+  <pre><code>"config": {
+  "api_key": { "type": "string", "label": "接口密钥", "default": "" },
+  "limit":   { "type": "number", "label": "每日上限", "default": 10 },
+  "enabled": { "type": "bool",   "label": "启用",     "default": true }
+}</code></pre>
+  <pre><code>def on_startup(bot):
+    cfg = bot.plugins.plugin_config("my-plugin")
+    print("密钥：", cfg.get("api_key"))</code></pre>
+  <p>配置变更时可选实现回调：</p>
+  <pre><code>def on_config_changed(values):
+    print("新配置：", values)</code></pre>
+
+  <h2>六、图标与资源</h2>
+  <ul>
+    <li><code>icon.png</code> 放在包根目录，控制台插件卡片会直接显示；缺失时用名称首字母代替</li>
+    <li>其余资源统一放 <code>assets/</code>，用相对路径读取：</li>
+  </ul>
+  <pre><code>from pathlib import Path
+ASSETS = Path(__file__).parent / "assets"
+
+def on_startup(bot):
+    data = (ASSETS / "data.json").read_text("utf-8")</code></pre>
+
+  <h2>七、生命周期与内存回收</h2>
+  <p>YueWuBot 采用「用时加载、闲置回收」策略：</p>
+  <ol>
+    <li>插件启用时 <code>import</code> 进来，注册钩子与指令</li>
+    <li>超过设定时间（默认 10 分钟，可在 <code>runtime.plugin_idle_minutes</code> 调整）未被调用，模块会被从 <code>sys.modules</code> 移除并 <code>gc.collect()</code></li>
+    <li>下次消息命中时自动重新加载：指令按 <code>commands[].name</code> / <code>aliases</code> 精确匹配后唤醒，随后立即执行，无需重启</li>
+    <li>只靠 <code>on_message</code> 等钩子工作的插件，需在 <code>m.json</code> 中声明 <code>triggers</code> 才能休眠；没有触发词的钩子插件会常驻内存</li>
+  </ol>
+  <pre><code>"triggers": {
+  "on_message": ["签到", "打卡"],
+  "on_group_message": ["天气"]
+}</code></pre>
+  <div class="note">因此<strong>不要把重要状态只放在内存里</strong>：需要持久化的数据请写到 <code>assets/</code> 或插件目录下的文件，并在 <code>on_startup</code> 中重新读取。</div>
+
+  <h2>八、完整示例</h2>
+  <p>一个每日签到插件，含配置项与图片发送：</p>
+  <pre><code># main.py
+import json, time
+from pathlib import Path
+
+ASSETS = Path(__file__).parent / "assets"
+DB = ASSETS / "signin.json"
+
+def _load():
+    if DB.exists():
+        return json.loads(DB.read_text("utf-8"))
+    return {}
+
+def _save(d):
+    DB.parent.mkdir(parents=True, exist_ok=True)
+    DB.write_text(json.dumps(d, ensure_ascii=False), "utf-8")
+
+def on_startup(bot):
+    print("[signin] 已加载")
+
+def cmd_signin(ctx, args):
+    db = _load()
+    today = time.strftime("%Y-%m-%d")
+    rec = db.setdefault(ctx.user_id, {"days": 0, "last": ""})
+    if rec["last"] == today:
+        return ctx.reply("今天已经签过啦，明天再来～")
+    rec["days"] += 1
+    rec["last"] = today
+    _save(db)
+    return ctx.reply("签到成功，已连续 %d 天！" % rec["days"])</code></pre>
+  <pre><code># m.json
+{
+  "name": "signin",
+  "version": "1.0.0",
+  "author": "YueWu",
+  "description": "每日签到，记录连续天数",
+  "hooks": { "on_startup": "on_startup" },
+  "commands": [
+    { "name": "签到", "aliases": ["signin"], "description": "每日签到",
+      "usage": "/签到", "handler": "cmd_signin" }
+  ],
+  "config": {
+    "bonus": { "type": "number", "label": "每日奖励积分", "default": 10 }
+  }
+}</code></pre>
+
+  <h2>九、打包与安装</h2>
+  <ol>
+    <li>保证 <code>main.py</code> 与 <code>m.json</code> 在压缩包根目录（或单一子目录内）</li>
+    <li>执行 <code>zip -r signin.zip main.py m.json icon.png assets/</code></li>
+    <li>控制台「插件」页把 zip 拖进去即可，装好自动启用</li>
+  </ol>
+  <div class="note">限制：单包解压后不超过 10MB，文件数不超过 300，禁止绝对路径与 <code>..</code> 路径穿越。插件代码以当前用户权限运行，请只安装可信来源的插件。</div>
+
+  <h2>十、调试</h2>
+  <ul>
+    <li><code>print()</code> 与 <code>logging</code> 输出都会进入控制台「日志」页</li>
+    <li>插件抛出的异常会被捕获并记录，不会中断机器人</li>
+    <li>改完代码在「插件」页关掉再打开即可热重载，无需重启进程</li>
+  </ul>
+
+  <h2>十一、内置指令</h2>
+  <p>发送 <code>#YueWu</code> 可查看版本、运行时间与运行状态，群聊无需 @，且不经过模型对话。</p>
+  <pre><code>YueWuBot
+YueWuBot信息
+运行时间: 0天1时2分3秒
+运行状态: 运行中
+操作系统: Ubuntu 24.04 · x86_64
+当前负载: 0.12 / 0.08 / 0.05 · 内存 48.2MB
+当前版本: 1.4.1
+更新检测: 您无需更新</code></pre>
+  <p>常用内置指令：<code>/help</code>、<code>/ping</code>、<code>/reset</code>、<code>/me</code>。插件指令免 @ 用 <code>/指令</code>，快速群对话用 <code>#内容</code>。</p>
+
+  <p style="margin-top:36px;color:var(--dim2);font-size:12px">YueWuBot v1.4.1 · 文档随版本更新</p>
+</div>
+
+  <h2>十二、版本说明</h2>
+  <p>YueWuBot 1.4.1 为纯净版，不含任何 AstrBot 组件，仅支持原生 YueWu 插件，占用最低，适合生产部署。1.4.1 暂未提供 AstrBot 兼容版。</p>
+  <p>AstrBot 完整兼容版内置移植自 AstrBot 官方源码的插件加载机制（Star 注册表、指令过滤器与装饰器），可直接运行 AstrBot 格式插件，随包附带 AGPL-3.0 许可证原文。</p>
+
+  <h2>十三、管理员与插件权限</h2>
+  <p>插件卡片右侧的「仅管理员」按钮可以把某个插件设为管理员专用。默认管理员列表为空，添加管理员 QQ 后，只有列表内的账号能调用被限制的插件，其他人使用会收到「权限不足」。</p>
+  <p>管理员名单在控制台「插件」页顶部维护，也可以用接口读写：</p>
+  <pre><code>GET  /api/admins
+POST /api/admins          {"admins": ["3835347820"]}
+POST /api/plugins/&lt;name&gt;/admin  {"admin_only": true}</code></pre>
+  <p>配置项对应 <code>config.json</code> 的 <code>admins</code> 数组；插件开关保存在 <code>data/plugins.json</code> 的 <code>admin_only</code> 字段。</p>
+
+</body>
+</html>

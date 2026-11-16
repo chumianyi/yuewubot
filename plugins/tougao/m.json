@@ -1,0 +1,58 @@
+{
+  "name": "投稿",
+  "version": "1.0.0",
+  "author": "YueWu",
+  "description": "收集群友的插件创意，编号管理，管理员可查看与结项（仅本服使用）",
+  "homepage": "",
+  "repository": "",
+  "icon": "icon.png",
+  "hooks": {
+    "on_startup": "on_startup",
+    "on_message": "on_message"
+  },
+  "triggers": {
+    "on_message": ["投稿", "已完成", "未通过"]
+  },
+  "commands": [
+    {
+      "name": "投稿",
+      "aliases": ["tougao"],
+      "description": "投稿一个插件创意",
+      "usage": "/投稿 插件名称 插件功能",
+      "handler": "cmd_submit"
+    },
+    {
+      "name": "全部投稿",
+      "aliases": ["投稿列表"],
+      "description": "查看全部投稿（管理员）",
+      "usage": "/全部投稿",
+      "handler": "cmd_list"
+    },
+    {
+      "name": "已完成",
+      "aliases": ["完成"],
+      "description": "把投稿标记为已完成并移除（管理员）",
+      "usage": "/已完成 编号",
+      "handler": "cmd_done"
+    },
+    {
+      "name": "未通过",
+      "aliases": ["驳回"],
+      "description": "把投稿标记为未通过并移除（管理员）",
+      "usage": "/未通过 编号",
+      "handler": "cmd_reject"
+    }
+  ],
+  "config": {
+    "admin_qq": {
+      "type": "string",
+      "label": "管理员 QQ",
+      "default": "3835347820"
+    },
+    "max_items": {
+      "type": "number",
+      "label": "最多保留条数",
+      "default": 300
+    }
+  }
+}
